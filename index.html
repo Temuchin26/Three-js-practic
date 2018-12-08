@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>lab4_Temuchyn_Torcheniuk</title>
+		<script type="text/javascript" src="libs/three.js"></script>
+		<script type="text/javascript" src="libs/jquery-1.12.3.min.js"></script>
+		<script type="text/javascript" src="libs/AsciiEffect.js"></script>
+		<script type="text/javascript" src="libs/stats.min.js"></script>
+		<script type="text/javascript" src="libs/dat.gui.min.js"></script>
+		<script type="text/javascript" src="libs/light.js"></script>
+		<script type="text/javascript" src="libs/orbit.js"></script>
+		<script type="text/javascript" src="https://threejs.org/examples/js/loaders/OBJLoader.js"></script>
+		<script type="text/javascript" src="https://threejs.org/examples/js/loaders/MTLLoader.js"></script>
+
+
+		<script src="./house.js"></script>
+		<script src="./snowMan.js"></script>
+		<script src="./dog.js"></script>
+		<script src="./pine.js"></script>
+		
+
+
+		<style>
+		body{
+			margin: 0;
+			overflow: hidden;
+		}
+		</style>
+	</head>
+	<body>
+		<div id="WebGL-output"></div>
+	</body>
+	<script>
+	$(function () {
+		var stats = initStats();
+		var scene = new THREE.Scene();
+		var camera = new THREE.PerspectiveCamera(12, window.innerWidth / window.innerHeight, 0.2, 1000);
+		var renderer = new THREE.WebGLRenderer();
+
+		renderer.setSize(window.innerWidth, window.innerHeight);
+		renderer.shadowMapEnabled = true;
+
+		// create the ground plane
+		var planeGeometry = new THREE.PlaneGeometry(500,500,1,1);
+		var planeMaterial = new THREE.MeshStandardMaterial({color: 0xffffff});
+		var plane = new THREE.Mesh(planeGeometry,planeMaterial);
+		plane.receiveShadow  = true;
+
+		// rotate and position the plane
+		plane.rotation.x=-0.5*Math.PI;
+		plane.position.x=15
+		plane.position.y=0
+		plane.position.z=0
+
+		// add the plane to the scene
+		scene.add(plane);
+		scene.add(house)
+		scene.add(snowManGroup);
+		scene.add(dog);
+
+		//loader for the material
+		var mtlLoader = new THREE.MTLLoader();
+		//var material = new THREE.MeshLambertMaterial({ color: 0xcc8729 });
+		var materials = mtlLoader.parse(getMtlFileAsString());
+
+		var objLoader = new THREE.OBJLoader();
+		objLoader.setMaterials(materials);
+
+
+		function createPine(cord){
+			const {x, y, z} = cord;
+			var geometry = objLoader.parse(getObjFileAsString());
+			geometry.position.set(x, y, z);
+			geometry.scale.set(3, 3, 3);
+	
+			geometry.traverse(function(child){
+			if (child instanceof THREE.Mesh) {
+				//child.material = material;
+				child.castShadow = true;
+				child.receiveShadow = true;
+			}
+			});
+
+			scene.add(geometry);
+		}
+
+		createPine({x: 110, y: -2, z: -20})
+		createPine({x: 100, y: -2, z: 10})
+		createPine({x: -60, y: -2, z: -60})
+		createPine({x: -20, y: -2, z: 40})
+		createPine({x: -50, y: -2, z: -26})
+		createPine({x: -40, y: -2, z: 50})
+
+		createPine({x: 40, y: -2, z: -60})
+
+
+		/*
+		var box = new THREE.BoxGeometry(1, 1, 1);
+		var material = new THREE.MeshLambertMaterial({ color: 0x00ff00 });
+		var geometry = new THREE.Mesh(box, material);
+		*/
+
+		
+		camera.position.x = -200;
+		camera.position.y =30;
+		camera.position.z = 50;
+		camera.lookAt(scene.position);
+
+		// add subtle ambient lighting
+		var ambientLight = new THREE.AmbientLight(0x0c0c0c, 2);
+		scene.add(ambientLight);
+
+		/////////////////////////////////////////////
+		// Falling snow /////////////////////////////
+		/////////////////////////////////////////////
+
+		var flakeCount = 90;
+		var flakeGeometry = new THREE.TetrahedronGeometry(0.2); // radius
+		var flakeMaterial = new THREE.MeshPhongMaterial({ color: 0xffffff });
+		var snow = new THREE.Group();
+
+		for (let i = 0; i < flakeCount; i++) {
+		var flakeMesh = new THREE.Mesh(flakeGeometry, flakeMaterial);
+		flakeMesh.position.set(
+			(Math.random() - 0.5) * 60,
+			(Math.random() - 0.5) * 30,
+			(Math.random() - 0.5) * 80
+		);
+		snow.add(flakeMesh);
+		}
+		scene.add(snow);
+
+		var flakeArray = snow.children;
+
+		var animate = function() {
+		requestAnimationFrame(animate);
+
+		for (i = 0; i < flakeArray.length / 2; i++) {
+			flakeArray[i].rotation.y += 0.01;
+			flakeArray[i].rotation.x += 0.02;
+			flakeArray[i].rotation.z += 0.03;
+			flakeArray[i].position.y -= 0.018;
+			if (flakeArray[i].position.y < -4) {
+			flakeArray[i].position.y += 20;
+			}
+		}
+		for (i = flakeArray.length / 2; i < flakeArray.length; i++) {
+			flakeArray[i].rotation.y -= 0.03;
+			flakeArray[i].rotation.x -= 0.03;
+			flakeArray[i].rotation.z -= 0.02;
+			flakeArray[i].position.y -= 0.016;
+			if (flakeArray[i].position.y < -4) {
+			flakeArray[i].position.y += 19.5;
+			}
+
+			snow.rotation.y -= 0.0000002;
+		}
+		// controls.update();
+
+		renderer.render(scene, camera);
+		};
+
+		animate();
+
+		let newControls = new THREE.OrbitControls(camera, renderer.domElement);
+		newControls.maxPolarAngle = Math.PI / 2.1;
+
+
+		$("#WebGL-output").append(renderer.domElement);
+
+		var step=0;
+
+		var controls = new function() {
+			this.rotationSpeed = 0.002;
+		}
+
+		var gui = new dat.GUI();
+		gui.add(controls, 'rotationSpeed',0,0.02);
+		render();
+
+		function render() {
+			stats.update();
+			scene.rotation.y+= controls.rotationSpeed;
+			requestAnimationFrame(render);
+			// controls.update();
+			renderer.render(scene, camera);
+		}
+
+		function initStats() {
+			var stats = new Stats();
+			stats.setMode(0);
+			stats.domElement.style.position = 'absolute';
+			stats.domElement.style.left = '0px';
+			stats.domElement.style.top = '0px';
+			$("#Stats-output").append( stats.domElement );
+			return stats;
+		}
+	});
+	</script>
+</html>
